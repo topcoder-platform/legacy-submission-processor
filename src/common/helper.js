@@ -4,10 +4,18 @@
 
 const config = require('config')
 const ifxnjs = require('ifxnjs')
+const _ = require('lodash')
 
 const Pool = ifxnjs.Pool
 const pool = Promise.promisifyAll(new Pool())
 pool.setMaxPoolSize(config.get('INFORMIX.POOL_MAX_SIZE'))
+
+const submissionApi = require('@topcoder-platform/topcoder-submission-api-wrapper')
+const submissionApiClient = submissionApi(_.pick(config, [
+  'AUTH0_URL', 'AUTH0_AUDIENCE', 'TOKEN_CACHE_TIME', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'SUBMISSION_API_URL', 'AUTH0_PROXY_SERVER_URL']))
+
+// Variable to cache reviewTypes from Submission API
+const reviewTypes = {}
 
 /**
  * Get Informix connection using the configured parameters
@@ -39,7 +47,41 @@ function getKafkaOptions () {
   return options
 }
 
+/*
+ * Function to get reviewTypeId by Name
+ * @param {String} reviewTypeName Name of the reviewType
+ * @returns {String} reviewTypeId
+ */
+async function getReviewTypeId (reviewTypeName) {
+  if (!reviewTypes[reviewTypeName]) {
+    // Get review type id from Submission API
+    const response = await submissionApiClient.searchReviewTypes({ name: reviewTypeName })
+    if (response.body && response.body.length !== 0) {
+      reviewTypes[reviewTypeName] = response.body[0].id
+    } else {
+      reviewTypes[reviewTypeName] = null
+    }
+  }
+  return reviewTypes[reviewTypeName]
+}
+
+/**
+ * Validate submission fields
+ * @param {Object} submission The submission object for which to validate the fields.
+ * @param {Array(String)} fields The array of fields to validate
+ * @private
+ */
+function validateSubmissionFields (submission, fields) {
+  for (const field of fields) {
+    if (!submission[field]) {
+      throw new Error(`${field} not found for submission: ${submission.id}`)
+    }
+  }
+}
+
 module.exports = {
   getKafkaOptions,
-  getInformixConnection
+  getInformixConnection,
+  getReviewTypeId,
+  validateSubmissionFields
 }

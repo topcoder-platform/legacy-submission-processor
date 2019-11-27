@@ -7,7 +7,7 @@ start Kafka server, start informix database(Make sure you have already executed 
 1. start kafka-console-producer to write messages to `challenge.notification.create` topic:
   `bin/kafka-console-producer.sh --broker-list localhost:9092 --topic submission.notification.aggregate`
 2. write message:
-  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": 111, "originalTopic": "submission.notification.create", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
+  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6445-433e-8af1-c56f317f2eed", "originalTopic": "submission.notification.create", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
 3. Check the app console, it will show the success message.
 4. check the database using following sql script:
 
@@ -18,65 +18,96 @@ start Kafka server, start informix database(Make sure you have already executed 
     select * from upload;
     ```
 
-5. Clear the database using following sql script:
+5. write message:
+  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6440-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.create", "challengeId": 30005530, "memberId": 124764, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95284, "created": "2018-02-16T00:00:00" } }`
 
-    ```bash
-    database tcs_catalog;
-    delete from resource_submission;
-    delete from submission;
-    delete from upload;
+6. check the app console, it will show success message.
+7. repeat step 4 verify the database.
+8. writ message:
+  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6441-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.create", "challengeId": 30005540, "memberId": 132458, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95308, "created": "2018-02-16T00:00:00" } }`
+9. check the app console, it will show success message.
+10. repeat step 4 to verify the database(Only upload table has an additional record after step 8)
+11. write message:
+  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6442-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.create", "challengeId": 30005530, "memberId": 132458, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95308, "created": "2018-02-16T00:00:00" } }`
+12. check the app console, it will show failure message.
+
+13. connect to the database tcs_catalog and execute the following statement :
+    ```sql
+    select url from upload where upload_id = 3000;
     ```
+    note the down the url value.
 
-6. write message:
-  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": 112, "originalTopic": "submission.notification.create", "challengeId": 30005530, "memberId": 124764, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95284, "created": "2018-02-16T00:00:00" } }`
+14. write the the following message:
+  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6445-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.update", "challengeId": 30005521, "legacySubmissionId": 2000 , "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path1", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
 
-7. check the app console, it will show success message.
-8. repeat step 5 and step 6 to verify and clear database
-9. writ message:
-  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": 114, "originalTopic": "submission.notification.create", "challengeId": 30005540, "memberId": 132458, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95308, "created": "2018-02-16T00:00:00" } }`
-10. check the app console, it will show success message.
-11. repeat step 5 and step 6 to verify and clear database(Only upload table has record)
-12. write message:
-  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": 113, "originalTopic": "submission.notification.create", "challengeId": 30005530, "memberId": 132458, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95308, "created": "2018-02-16T00:00:00" } }`
-13. check the app console, it will show failure message.
+15. The processor console will show a success message.
+Repeate step 13 to check if the value of the url has been updated
 
-## Unit test Coverage
+16. write the following message:
+  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6443-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.update", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path2", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
 
-  34 passing (4s)
+  The following message will be shown on the processor console:
+  `debug: legacy submission id not found, no update performed`
 
-File                  |  % Stmts | % Branch |  % Funcs |  % Lines | Uncovered Line #s
-----------------------|----------|----------|----------|----------|-------------------
-All files             |    90.95 |    82.95 |     96.3 |    90.82 |
- config               |      100 |    93.48 |      100 |      100 |
-  default.js          |      100 |    93.48 |      100 |      100 |           8,31,42
-  test.js             |      100 |      100 |      100 |      100 |
- src                  |      100 |      100 |      100 |      100 |
-  bootstrap.js        |      100 |      100 |      100 |      100 |
-  constants.js        |      100 |      100 |      100 |      100 |
- src/common           |       85 |       60 |    94.74 |       85 |
-  IdGenerator.js      |       80 |       75 |      100 |       80 |... 80,81,95,96,97
-  helper.js           |    69.23 |        0 |       50 |    69.23 |       35,36,37,39
-  logger.js           |    91.04 |    68.18 |      100 |    91.04 |33,56,61,85,99,119
- src/services         |      100 |      100 |      100 |      100 |
-  ProcessorService.js |      100 |      100 |      100 |      100 |
+17. Write the following message:
+  `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6445-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.update", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path3", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
 
-## E2E test Coverage
+  The following success message will be shown on the processor console :
+  `debug: Updated submission : id cfdbc0cf-6445-433e-8af1-c56f317f2afd, url http://content.topcoder.com/some/path3, legacySubmissionId 2001`
 
-  37 passing (1m)
+  Check the upload table in tcs_catalog by exeuting the following statement:
 
-File                  |  % Stmts | % Branch |  % Funcs |  % Lines | Uncovered Line #s
-----------------------|----------|----------|----------|----------|-------------------
-All files             |       93 |    84.38 |    97.14 |    92.89 |
- config               |      100 |    93.48 |      100 |      100 |
-  default.js          |      100 |    93.48 |      100 |      100 |           8,31,42
-  test.js             |      100 |      100 |      100 |      100 |
- src                  |    96.72 |     62.5 |    90.91 |    96.49 |
-  app.js              |    95.45 |     62.5 |     87.5 |    95.35 |             56,81
-  bootstrap.js        |      100 |      100 |      100 |      100 |
-  constants.js        |      100 |      100 |      100 |      100 |
- src/common           |     87.5 |       70 |      100 |     87.5 |
-  IdGenerator.js      |       80 |       75 |      100 |       80 |... 80,81,95,96,97
-  helper.js           |    92.31 |       50 |      100 |    92.31 |                37
-  logger.js           |    91.04 |    72.73 |      100 |    91.04 |33,56,61,85,99,119
- src/services         |      100 |      100 |      100 |      100 |
-  ProcessorService.js |      100 |      100 |      100 |      100 |
+  ```sql
+  select url from upload where upload_id = 3001;
+  ```
+  The url value should be updated to the one sent on the previous message.
+
+18. Write the following message:
+  `{"topic":"submission.notification.aggregate","originator":"submission-api","timestamp":"2019-10-08T00:00:00.000Z","mime-type":"application/json","payload":{"id":"cfdbc0cf-8543-433e-8af1-c56f317f2afd","resource":"review","submissionId":"cfdbc0cf-6443-433e-8af1-c56f317f2afd","typeId":"bcf2b43b-20df-44d1-afd3-7fc9798dfcae","score":90.2,"metadata":{"testType":"final","testCases":["DPK.CP001_A549_24H_X1_B42","LITMUS.KD017_A549_96H_X1_B42"]}}}`
+
+  This message testType is not 'provisional', then it should be skipped by the processor and show the following message in the console:
+  `debug: Skipped non provisional test type: final`
+
+19. Write Antivirus scan review, it shoulw be skipped as well :
+  `{"topic":"submission.notification.aggregate","originator":"submission-api","timestamp":"2019-10-08T00:00:00.000Z","mime-type":"application/json","payload":{"id":"cfdbc0cf-8543-433e-8af1-c56f317f2afd","resource":"review","submissionId":"cfdbc0cf-6443-433e-8af1-c56f317f2afd","typeId":"cfdbc0cf-6437-434e-8af1-c56f317f2afd","score":90.2,"metadata":{"testType":"provisional","testCases":["DPK.CP001_A549_24H_X1_B42","LITMUS.KD017_A549_96H_X1_B42"]}}}`
+
+20. Write message for provisional review, but the submission does not have the legacySubmissionId:
+    `{"topic":"submission.notification.aggregate","originator":"submission-api","timestamp":"2019-10-08T00:00:00.000Z","mime-type":"application/json","payload":{"id":"cfdbc0cf-8543-433e-8af1-c56f317f2afd","resource":"review","submissionId":"cfdbc0cf-6443-433e-8af1-c56f317f2afd","typeId":"bcf2b43b-20df-44d1-afd3-7fc9798dfcae","score":90.2,"metadata":{"testType":"provisional","testCases":["DPK.CP001_A549_24H_X1_B42","LITMUS.KD017_A549_96H_X1_B42"]}}}`
+
+  The following error should be shown on the console:
+  `Error: legacySubmissionId not found for submission: cfdbc0cf-6443-433e-8af1-c56f317f2afd`
+
+21. Write message for provisional review with all needed fields provided :
+    Check first the database by executing the following statements:
+
+```sql
+select initial_score from submission where submission_id = 2000;
+
+select submission_points from informixoltp:long_submission
+where long_component_state_id=7000 and submission_number=1 and example=0;
+
+select points from informixoltp:long_component_state
+where long_component_state_id=7000;
+```
+
+`{"topic":"submission.notification.aggregate","originator":"submission-api","timestamp":"2019-10-08T00:00:00.000Z","mime-type":"application/json","payload":{"id":"cfdbc0cf-8543-433e-8af1-c56f317f2afd","resource":"review","submissionId":"cfdbc0cf-6444-433e-8af1-c56f317f2afd","typeId":"bcf2b43b-20df-44d1-afd3-7fc9798dfcae","score":90.2,"metadata":{"testType":"provisional","testCases":["DPK.CP001_A549_24H_X1_B42","LITMUS.KD017_A549_96H_X1_B42"]}}}`
+
+success message should be shown on the console `debug: Update provisional score for submission: 2000`
+And the database should be updated, check it by executing the SQL statements above.
+
+22. Write message for review summation with no legacy submission id
+  `{"topic":"submission.notification.aggregate","originator":"submission-api","timestamp":"2019-10-08T00:00:00.000Z","mime-type":"application/json","payload":{"id":"cfdbc0cf-8543-433e-8af1-c56f317f2afd","resource":"reviewSummation","submissionId":"cfdbc0cf-6443-433e-8af1-c56f317f2afd","aggregateScore":97.5,"metadata":{"testType":"final","testCases":["DPK.CP001_A549_24H_X1_B42","LITMUS.KD017_A549_96H_X1_B42"]}}}`
+
+The following error should be shown: `Error: legacySubmissionId not found for submission: cfdbc0cf-6443-433e-8af1-c56f317f2afd`
+
+23. Write valid review summation message.
+  First, check the database with the following SQL statements:
+```sql
+select final_score, initial_score from submission where submission_id = 2000;
+
+select * from informixoltp:long_comp_result;
+```
+
+`{"topic":"submission.notification.aggregate","originator":"submission-api","timestamp":"2019-10-08T00:00:00.000Z","mime-type":"application/json","payload":{"id":"cfdbc0cf-8543-433e-8af1-c56f317f2afd","resource":"reviewSummation","submissionId":"cfdbc0cf-6444-433e-8af1-c56f317f2afd","aggregateScore":99.11,"metadata":{"testType":"final","testCases":["DPK.CP001_A549_24H_X1_B42","LITMUS.KD017_A549_96H_X1_B42"]}}}`
+
+There should be a success message and the database should be updated, double-check the database using the SQL statements above.

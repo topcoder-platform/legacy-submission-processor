@@ -11,6 +11,7 @@ const logger = require('../common/logger')
 const helper = require('../common/helper')
 const IDGenerator = require('../common/IdGenerator')
 const constants = require('../constants')
+const InformixService = require('./InformixService')
 
 const idUploadGen = new IDGenerator(config.ID_SEQ_UPLOAD)
 const idSubmissionGen = new IDGenerator(config.ID_SEQ_SUBMISSION)
@@ -21,61 +22,6 @@ const submissionApiClient = submissionApi(_.pick(config, [
 const timeZone = 'America/New_York'
 
 /**
- * Prepare Informix statement
- * @param {Object} connection the Informix connection
- * @param {String} sql the sql
- * @return {Object} Informix statement
- */
-async function prepare (connection, sql) {
-  const stmt = await connection.prepareAsync(sql)
-  return Promise.promisifyAll(stmt)
-}
-
-/**
- * Get resourceId, phaseTypeId for a given user, challenge id, resource role id and phase id
- *
- * @param {Object} connection the Informix connection
- * @param {Number} challengeId challenge id
- * @param {Number} userId user id
- * @param {Number} resourceRoleId resource role id
- * @param {Number} phaseId submission phasse id
- * @returns {Object} challenge properties (resourceId, phaseTypeId)
- */
-async function getChallengeProperties (connection, challengeId, userId, resourceRoleId, phaseId) {
-  // The query to get challenge properties
-  const query = `select r.resource_id, pi28.value, pp.phase_type_id, pcl.project_type_id
-    from project p, project_category_lu pcl, resource r, project_phase pp, outer project_info pi28
-    where p.project_category_id = pcl.project_category_id and p.project_id = r.project_id
-    and r.user_id = ${userId} and r.resource_role_id = ${resourceRoleId} and p.project_id = pp.project_id
-    and pp.project_phase_id = ${phaseId} and p.project_id = pi28.project_id
-    and pi28.project_info_type_id = 28 and p.project_id = ${challengeId}`
-  const result = await connection.queryAsync(query)
-  if (result.length === 0) {
-    throw new Error(`Empty result get challenge properties for: challengeId ${challengeId}, userId ${userId}, resourceRoleId ${resourceRoleId}, phaseId ${phaseId}`)
-  }
-  return {
-    resourceId: Number(result[0].resource_id),
-    phaseTypeId: Number(result[0].phase_type_id)
-  }
-}
-
-/**
- * Insert a record in specified table
- * @param {Object} connection the Informix connection
- * @param {String} tableName the table name
- * @param {Object} columnValues the column key-value map
- */
-async function insertRecord (connection, tableName, columnValues) {
-  const normalizedColumnValues = _.omitBy(columnValues, _.isNil)
-  const keys = Object.keys(normalizedColumnValues)
-  const values = _.fill(Array(keys.length), '?')
-
-  const insertRecordStmt = await prepare(connection, `insert into ${tableName} (${keys.join(', ')}) values (${values.join(', ')})`)
-
-  await insertRecordStmt.executeAsync(Object.values(normalizedColumnValues))
-}
-
-/**
  * Create challenge submission
  * @param {Object} connection the Informix connection
  * @param {Object} payload the message payload
@@ -84,7 +30,7 @@ async function createChallengeSubmission (connection, payload) {
   const {
     resourceId,
     phaseTypeId
-  } = await getChallengeProperties(connection, payload.challengeId, payload.memberId, constants.submissionTypes[payload.type].roleId, payload.submissionPhaseId)
+  } = await InformixService.getChallengeProperties(connection, payload.challengeId, payload.memberId, constants.submissionTypes[payload.type].roleId, payload.submissionPhaseId)
 
   logger.debug('Getting uploadId')
   const uploadId = await idUploadGen.getNextId()
@@ -107,7 +53,7 @@ async function createChallengeSubmission (connection, payload) {
     modify_date: momentTZ.tz(payload.created, timeZone).format('YYYY-MM-DD HH:mm:ss')
   }
 
-  await insertRecord(connection, 'upload', {
+  await InformixService.insertRecord(connection, 'upload', {
     upload_id: uploadId,
     project_id: payload.challengeId,
     project_phase_id: payload.submissionPhaseId,
@@ -127,7 +73,7 @@ async function createChallengeSubmission (connection, payload) {
       legacyUploadId: uploadId
     }
   } else {
-    await insertRecord(connection, 'submission', {
+    await InformixService.insertRecord(connection, 'submission', {
       submission_id: submissionId,
       upload_id: uploadId,
       submission_status_id: constants.submissionStatus.Active,
@@ -135,7 +81,7 @@ async function createChallengeSubmission (connection, payload) {
       ...audits
     })
 
-    await insertRecord(connection, 'resource_submission', {
+    await InformixService.insertRecord(connection, 'resource_submission', {
       submission_id: submissionId,
       resource_id: resourceId,
       ...audits
@@ -180,10 +126,21 @@ async function processMessage (message) {
     // begin transaction
     await connection.beginTransactionAsync()
 
-    if (message.payload.resource === constants.resources.submission && message.payload.originalTopic === config.KAFKA_NEW_SUBMISSION_TOPIC) {
-      await this.createChallengeSubmission(connection, message.payload)
-    } else {
-      logger.debug(`Skipped message for resource ${message.payload.resource} and originalTopic ${message.payload.originalTopic}`)
+    switch (message.payload.resource) {
+      // handle submission resource
+      case constants.resources.submission:
+        await processSubmission(connection, message.payload)
+        break
+
+      // handle review resource
+      case constants.resources.review:
+        await processReview(connection, message.payload)
+        break
+
+      // handle review summation resource
+      case constants.resources.reviewSummation:
+        await processReviewSummation(connection, message.payload)
+        break
     }
 
     // commit the transaction
@@ -203,15 +160,179 @@ processMessage.schema = {
     timestamp: Joi.date().required(),
     'mime-type': Joi.string().required(),
     payload: Joi.object().keys({
+      id: Joi.sid().required(),
       resource: Joi.resource().required(),
-      originalTopic: Joi.string().required()
+      originalTopic: Joi.string()
+        .when('resource', { is: constants.resources.submission, then: Joi.string().required() }),
+      submissionPhaseId: Joi.id()
+        .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
+      challengeId: Joi.id()
+        .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
+      memberId: Joi.id()
+        .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
+      url: Joi.string()
+        .when('resource', { is: constants.resources.submission, then: Joi.string().uri().required() }),
+      type: Joi.string()
+        .when('resource', { is: constants.resources.submission, then: Joi.string().required() }),
+      created: Joi.date()
+        .when('resource', { is: constants.resources.submission, then: Joi.date().required() }),
+      legacySubmissionId: Joi.id()
     }).unknown(true).required()
   }).required()
 }
 
+/**
+ * Update challenge submission
+ * @param {Object} connection the Informix connection
+ * @param {Object} payload the message payload
+ */
+async function updateChallengeSubmission (connection, payload) {
+  let legacySubmissionId = payload.legacySubmissionId
+  if (!legacySubmissionId) {
+    // The legacy submission id is not provided in the payload, we get it from the submissions-api
+    const submission = await submissionApiClient.getSubmission(payload.id)
+    legacySubmissionId = submission.body.legacySubmissionId || 0
+  }
+
+  if (legacySubmissionId !== 0) {
+    await InformixService.updateUploadUrl(connection, payload.url, legacySubmissionId)
+    logger.debug(`Updated submission : id ${payload.id}, url ${payload.url}, legacySubmissionId ${legacySubmissionId}`)
+  } else {
+    logger.debug('legacy submission id not found, no update performed')
+  }
+}
+
+updateChallengeSubmission.schema = {
+  payload: Joi.object().keys({
+    id: Joi.sid().required(),
+    url: Joi.string().uri().required(),
+    legacySubmissionId: Joi.id()
+  }).unknown(true).required()
+}
+
+/**
+ * This function processes the submission resource.
+ * It either creates or updates the submission resource based on the originalTopic
+ *
+ * @param {Object} connection The informix database connection
+ * @param {Object} payload The submission event payload.
+ */
+async function processSubmission (connection, payload) {
+  switch (payload.originalTopic) {
+    // create submission event
+    case config.KAFKA_NEW_SUBMISSION_TOPIC:
+      await createChallengeSubmission(connection, payload)
+      break
+
+    // update submission event
+    case config.KAFKA_UPDATE_SUBMISSION_TOPIC:
+      await updateChallengeSubmission(connection, payload)
+      break
+
+    default:
+      logger.debug(`Skipped message for resource ${payload.resource} and originalTopic ${payload.originalTopic}`)
+      break
+  }
+}
+
+processSubmission.schema = {
+  payload: Joi.object().keys({
+    resource: Joi.resource(),
+    id: Joi.sid().required(),
+    url: Joi.string().uri().required(),
+    legacySubmissionId: Joi.id(),
+    originalTopic: Joi.string().required()
+  }).unknown(true).required()
+}
+
+/**
+ * This function is responsible of processing the review event.
+ *
+ * @param {Object} connection The informix database connection
+ * @param {Object} payload The create review event payload
+ */
+async function processReview (connection, payload) {
+  // Only events related to 'provisional' tests need to be considered
+  const testType = _.get(payload, 'metadata.testType')
+  if (testType !== constants.reviewTestTypes.provisional) {
+    logger.debug(`Skipped non provisional test type: ${testType}`)
+    return
+  }
+
+  // Ignore Antivirus scan review type
+  const avScanTypeId = await helper.getReviewTypeId(constants.reviewTypes.AntivirusScan)
+  if (payload.typeId === avScanTypeId) {
+    logger.debug(`Ignoring AV Scan review for submission ${payload.submissionId}`)
+    return
+  }
+
+  // Get the submission from submission API
+  const response = await submissionApiClient.getSubmission(payload.submissionId)
+  const submission = response.body
+
+  // Validate the required fields for the submission
+  await helper.validateSubmissionFields(submission, ['memberId', 'submissionPhaseId', 'type', 'legacySubmissionId'])
+
+  // Update the provisional score for the submission
+  await InformixService.updateProvisionalScore(
+    connection,
+    submission.challengeId,
+    submission.memberId,
+    submission.submissionPhaseId,
+    submission.legacySubmissionId,
+    submission.type,
+    payload.score)
+}
+
+processReview.schema = {
+  payload: Joi.object().keys({
+    id: Joi.sid().required(),
+    submissionId: Joi.sid().required(),
+    score: Joi.number().min(0).max(100).required(),
+    metadata: Joi.object().keys({
+      testType: Joi.string().required()
+    }).unknown(true),
+    typeId: Joi.string()
+  }).unknown(true).required()
+}
+
+/**
+ * This function is responsible of processing the review summation event.
+ *
+ * @param {Object} connection The informix database connection
+ * @param {Object} payload The review summation event payload.
+ */
+async function processReviewSummation (connection, payload) {
+  // Get the submission from submissions API
+  const response = await submissionApiClient.getSubmission(payload.submissionId)
+  const submission = response.body
+
+  await helper.validateSubmissionFields(submission, ['memberId', 'legacySubmissionId'])
+
+  await InformixService.updateFinalScore(
+    connection,
+    submission.challengeId,
+    submission.memberId,
+    submission.legacySubmissionId,
+    payload.aggregateScore
+  )
+}
+
+processReviewSummation.schema = {
+  payload: Joi.object().keys({
+    id: Joi.sid().required(),
+    submissionId: Joi.sid().required(),
+    aggregateScore: Joi.number().positive().required()
+  }).unknown(true).required()
+}
+
 module.exports = {
+  processMessage,
+  processSubmission,
   createChallengeSubmission,
-  processMessage
+  updateChallengeSubmission,
+  processReview,
+  processReviewSummation
 }
 
 logger.buildService(module.exports)

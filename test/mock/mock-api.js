@@ -9,7 +9,7 @@ const logger = require('../../src/common/logger')
 
 // The good sample submission
 const sampleSubmission = {
-  id: 111,
+  id: 'cfdbc0cf-6443-433e-8af1-c56f318f2afd',
   challengeId: 30005521,
   memberId: 124916,
   resource: 'submission',
@@ -19,9 +19,22 @@ const sampleSubmission = {
   created: '2018-02-16T00:00:00'
 }
 
+const sampleUpdateSubmission = {
+  id: 'cfdbc0cf-6445-433e-8af1-c56f317f2afd',
+  originalTopic: 'submission.notification.update',
+  challengeId: 30005521,
+  legacySubmissionId: 2001,
+  memberId: 124916,
+  resource: 'submission',
+  url: 'http://content.topcoder.com/some/path3',
+  type: 'Contest Submission',
+  submissionPhaseId: 95245,
+  created: '2018-02-16T00:00:00'
+}
+
 // The good studio sample submission
 const sampleStudioSubmission = {
-  id: 112,
+  id: 'cfdbc0cf-6440-433e-8af1-c56f317f2afd',
   challengeId: 30005530,
   memberId: 124764,
   resource: 'submission',
@@ -33,7 +46,7 @@ const sampleStudioSubmission = {
 
 // The good no challenge properties sample submission
 const sampleNoChallengePropertiesSubmission = {
-  id: 113,
+  id: 'cfdbc0cf-6442-433e-8af1-c56f317f2afd',
   challengeId: 30005530,
   memberId: 132458,
   resource: 'submission',
@@ -45,7 +58,7 @@ const sampleNoChallengePropertiesSubmission = {
 
 // The good final fix sample submission
 const sampleFinalFixSubmission = {
-  id: 114,
+  id: 'cfdbc0cf-6441-433e-8af1-c56f317f2afd',
   challengeId: 30005540,
   memberId: 132458,
   resource: 'submission',
@@ -69,7 +82,7 @@ const sampleNotAllowMultipleSubmission = {
 
 // The good sample MM submission
 const sampleMMSubmission = {
-  id: 118,
+  id: 'cfdbc0cf-6439-433e-8af1-c56f317f2afd',
   challengeId: 30054163,
   memberId: 132458,
   resource: 'submission',
@@ -95,9 +108,9 @@ const sampleMMSubmission2 = {
 
 // The good mm provisional review
 const sampleMMProvisionalReview = {
-  id: 1,
+  id: 'bcf2b43b-20df-44d1-afd3-7fc9798dfcac',
   resource: 'review',
-  submissionId: 118,
+  submissionId: 'cfdbc0cf-6444-433e-8af1-c56f317f2afd',
   typeId: 'bcf2b43b-20df-44d1-afd3-7fc9798dfcae',
   score: 90.2,
   metadata: {
@@ -127,9 +140,9 @@ const sampleMMProvisionalReview2 = {
 
 // The good mm final review
 const sampleMMFinalReview = {
-  id: 3,
+  id: 'bcf2b43b-20df-44d1-afd3-7fc9798dfcad',
   resource: 'reviewSummation',
-  submissionId: 118,
+  submissionId: 'cfdbc0cf-6444-433e-8af1-c56f317f2afd',
   aggregateScore: 97.5,
   metadata: {
     testType: 'final',
@@ -155,11 +168,11 @@ const sampleMMFinalReview2 = {
   }
 }
 
-const normalSubmission = {
+const submissionWithNoLegacySubId = {
   resource: 'submission',
-  id: 'cfdbc0cf-6437-433e-8af1-c56f317f2afd',
+  id: 'cfdbc0cf-6443-433e-8af1-c56f317f2afd',
   type: 'Contest Submission',
-  url: 'https://topcoder-dev-submissions.s3.amazonaws.com/cfdbc0cf-6437-433e-8af1-c56f317f2afd',
+  url: 'https://topcoder-dev-submissions.s3.amazonaws.com/cfdbc0cf-6443-433e-8af1-c56f317f2afd',
   memberId: 124916,
   challengeId: 30005521,
   created: '2018-07-31T17:05:17.835Z',
@@ -172,14 +185,48 @@ const normalSubmission = {
   filename: 'Photo on 7-30-18 at 11.47 AM #2.jpg'
 }
 
+const submissionWithLegacySubId = {
+  resource: 'submission',
+  id: 'cfdbc0cf-6445-433e-8af1-c56f317f2afd',
+  type: 'Contest Submission',
+  url: 'https://topcoder-dev-submissions.s3.amazonaws.com/cfdbc0cf-6445-433e-8af1-c56f317f2afd',
+  memberId: 124916,
+  challengeId: 30005521,
+  legacySubmissionId: 2001,
+  created: '2018-07-31T17:05:17.835Z',
+  updated: '2018-07-31T17:05:17.835Z',
+  createdBy: 'callmekatootie',
+  updatedBy: 'callmekatootie',
+  submissionPhaseId: 95245,
+  isFileSubmission: true,
+  fileType: 'zip',
+  filename: 'Photo on 7-30-18 at 11.47 AM #2.jpg'
+}
+
+const submissionForMMWithLegacySubId = {
+  id: 'cfdbc0cf-6444-433e-8af1-c56f317f2afd',
+  legacySubmissionId: 2000,
+  type: 'Contest Submission',
+  url: 'https://topcoder-dev-submissions.s3.amazonaws.com/cfdbc0cf-6438-433e-8af1-c56f317f2afd',
+  memberId: 124916,
+  challengeId: 30054163,
+  created: '2018-07-31T17:05:17.835Z',
+  updated: '2018-07-31T17:05:17.835Z',
+  createdBy: 'callmekatootie',
+  updatedBy: 'callmekatootie',
+  submissionPhaseId: 95245,
+  isFileSubmission: true,
+  fileType: 'zip',
+  filename: 'Photo on 7-30-18 at 11.47 AM #2.jpg'
+}
+
 const submissions = {
-  '/submissions/111': sampleSubmission,
-  '/submissions/112': sampleStudioSubmission,
-  '/submissions/113': sampleNoChallengePropertiesSubmission,
-  '/submissions/114': sampleFinalFixSubmission,
-  '/submissions/115': sampleNotAllowMultipleSubmission,
-  '/submissions/118': sampleMMSubmission,
-  '/submissions/119': sampleMMSubmission2
+  '/submissions/cfdbc0cf-6440-433e-8af1-c56f317f2afd': sampleStudioSubmission,
+  '/submissions/cfdbc0cf-6441-433e-8af1-c56f317f2afd': sampleFinalFixSubmission,
+  '/submissions/cfdbc0cf-6442-433e-8af1-c56f317f2afd': sampleNoChallengePropertiesSubmission,
+  '/submissions/cfdbc0cf-6443-433e-8af1-c56f317f2afd': submissionWithNoLegacySubId,
+  '/submissions/cfdbc0cf-6444-433e-8af1-c56f317f2afd': submissionForMMWithLegacySubId,
+  '/submissions/cfdbc0cf-6445-433e-8af1-c56f317f2afd': submissionWithLegacySubId
 }
 
 // only include used properties and you may check real response from https://api.topcoder-dev.com/v4/challenges?filter=id=30005521
@@ -195,6 +242,23 @@ const challenges = {
   '/challenges?filter=id=30054163': getChallenge('DEVELOP_MARATHON_MATCH'),
   '/challenges?filter=id=30054164': getChallenge('DEVELOP_MARATHON_MATCH'),
   '/challenges?filter=id=60005521': getChallenge('')
+}
+
+const avScanReviewType = {
+  id: 'cfdbc0cf-6437-434e-8af1-c56f317f2afd',
+  name: 'AV SCAN',
+  isActive: true
+}
+
+const regularReviewType = {
+  id: 'cfdbc0cf-6437-435e-8af1-c56f317f2afd',
+  name: 'Review',
+  isActive: true
+}
+
+const reviewTypes = {
+  '/reviewTypes?name=AV%20SCAN&': avScanReviewType,
+  '/revieTypes?name=Review&': regularReviewType
 }
 
 const mockApi = http.createServer((req, res) => {
@@ -222,12 +286,14 @@ const mockApi = http.createServer((req, res) => {
   } else if (req.method === 'GET' &&
     (req.url.match(/^\/submissions\/[1-9]\d*$/) ||
      req.url.match(/^\/submissions\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/gi))) {
-    return send(res, 200, submissions[req.url] || normalSubmission)
+    return send(res, 200, submissions[req.url])
   } else if (req.method === 'GET' && Object.keys(challenges).includes(req.url)) {
     return send(res, 200, challenges[req.url])
   } else if (req.method === 'GET' && req.url.match(/^\/challenges\?filter=id=\d+$/)) {
     // default to mock as mm challenge
     return send(res, 200, getChallenge('DEVELOP_MARATHON_MATCH'))
+  } else if (req.method === 'GET' && Object.keys(reviewTypes).includes(req.url)) {
+    return send(res, 200, [reviewTypes[req.url]])
   } else {
     // 404 for other routes
     res.statusCode = 404
@@ -253,5 +319,6 @@ module.exports = {
   sampleMMSubmission2,
   sampleMMProvisionalReview2,
   sampleMMFinalReview2,
-  mockApi
+  mockApi,
+  sampleUpdateSubmission
 }

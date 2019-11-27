@@ -36,11 +36,22 @@ const submissionStatus = {
   Deleted: 5
 }
 
+const reviewTestTypes = {
+  provisional: 'provisional',
+  final: 'final'
+}
+
+const reviewTypes = {
+  AntivirusScan: 'AV SCAN'
+}
+
 module.exports = {
   resources,
   submissionTypes,
   uploadTypes,
   phaseTypes,
   uploadStatus,
-  submissionStatus
+  submissionStatus,
+  reviewTestTypes,
+  reviewTypes
 }
