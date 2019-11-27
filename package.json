@@ -9,7 +9,7 @@
     "lint:fix": "standard --fix",
     "mock-api": "NODE_ENV=test node test/mock/mock-api",
     "test": "nyc --reporter=html --reporter=text mocha test/unit/*.test.js --timeout 20000 --exit",
-    "e2e": "nyc --reporter=html --reporter=text mocha test/e2e/*.test.js --timeout 20000 --exit"
+    "e2e": "nyc --reporter=html --reporter=text mocha test/e2e/test.js --timeout 20000 --exit"
   },
   "author": "TCSCODER",
   "license": "none",
