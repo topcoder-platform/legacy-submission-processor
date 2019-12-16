@@ -44,14 +44,14 @@ jobs:
   "build-dev":
     <<: *defaults
     environment:
-      DEPLOY_ENV: "DEV"
+      DEPLOY_ENV: "dev"
       APPNAME: "legacy-submission-processor"    
     steps: *builddeploy_steps
 
   "build-prod":
     <<: *defaults
     environment:
-      DEPLOY_ENV: "PROD"    
+      DEPLOY_ENV: "prod"    
       APPNAME: "legacy-submission-processor"  
     steps: *builddeploy_steps
 
