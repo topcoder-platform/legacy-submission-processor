@@ -7,7 +7,7 @@ docker create --name app legacy-submission-processor:latest
 if [ -d node_modules ]
 then
   mv package-lock.json old-package-lock.json
-  docker cp app:/legacy-submission-processor/package-lock.json package-lock.json
+  docker cp app:/app/package-lock.json package-lock.json
   set +eo pipefail
   UPDATE_CACHE=$(cmp package-lock.json old-package-lock.json)
   set -eo pipefail
