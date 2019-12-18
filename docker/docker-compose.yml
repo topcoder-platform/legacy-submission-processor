@@ -2,16 +2,10 @@ version: '3'
 services:
   legacy-submission-processor:
     image: legacy-submission-processor:latest
-    container_name: legacy-submission-processor
     build:
       context: ../
       dockerfile: docker/Dockerfile
-    env_file:
-      - api.env
     volumes:
       - "../.nyc_output:/app/.nyc_output"
       - "../coverage:/app/coverage"
     network_mode: "host"
-    command: run start
-    # command: run test
-    # command: run e2e
