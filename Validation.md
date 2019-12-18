@@ -4,7 +4,7 @@
 
 start Kafka server, start informix database(Make sure you have already executed `docker-ifx/update.sql` script to insert test data), start mock api server and start the processor
 
-1. start kafka-console-producer to write messages to `challenge.notification.create` topic:
+1. start kafka-console-producer to write messages to `challenge.notification.aggregate` topic:
   `bin/kafka-console-producer.sh --broker-list localhost:9092 --topic submission.notification.aggregate`
 2. write message:
   `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6445-433e-8af1-c56f317f2eed", "originalTopic": "submission.notification.create", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
@@ -23,7 +23,7 @@ start Kafka server, start informix database(Make sure you have already executed 
 
 6. check the app console, it will show success message.
 7. repeat step 4 verify the database.
-8. writ message:
+8. write message:
   `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6441-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.create", "challengeId": 30005540, "memberId": 132458, "resource": "submission", "url": "http://content.topcoder.com/some/path", "type": "Contest Submission", "submissionPhaseId": 95308, "created": "2018-02-16T00:00:00" } }`
 9. check the app console, it will show success message.
 10. repeat step 4 to verify the database(Only upload table has an additional record after step 8)
@@ -48,7 +48,7 @@ start Kafka server, start informix database(Make sure you have already executed 
   `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6443-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.update", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path2", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
 
     The following message will be shown on the processor console:
-  `debug: legacy submission id not found, no update performed`
+  `debug: legacy submission id not found / payload url not available, no update performed`
 
 17. Write the following message:
   `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6445-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.update", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path3", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`

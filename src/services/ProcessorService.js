@@ -23,77 +23,90 @@ const timeZone = 'America/New_York'
 
 /**
  * Create challenge submission
- * @param {Object} connection the Informix connection
  * @param {Object} payload the message payload
  */
-async function createChallengeSubmission (connection, payload) {
-  const {
-    resourceId,
-    phaseTypeId
-  } = await InformixService.getChallengeProperties(connection, payload.challengeId, payload.memberId, constants.submissionTypes[payload.type].roleId, payload.submissionPhaseId)
+async function createChallengeSubmission (payload) {
+  // informix database connection
+  const connection = await helper.getInformixConnection()
 
-  logger.debug('Getting uploadId')
-  const uploadId = await idUploadGen.getNextId()
-  logger.info(`uploadId = ${uploadId}`)
+  try {
+    await connection.beginTransactionAsync()
 
-  let submissionId
-  let uploadType
+    const {
+      resourceId,
+      phaseTypeId
+    } = await InformixService.getChallengeProperties(connection, payload.challengeId, payload.memberId, constants.submissionTypes[payload.type].roleId, payload.submissionPhaseId)
 
-  if (phaseTypeId === constants.phaseTypes['Final Fix']) {
-    uploadType = constants.uploadTypes['Final Fix']
-  } else {
-    submissionId = await idSubmissionGen.getNextId()
-    uploadType = constants.uploadTypes.Submission
-  }
+    logger.debug('Getting uploadId')
+    const uploadId = await idUploadGen.getNextId()
+    logger.info(`uploadId = ${uploadId}`)
 
-  const audits = {
-    create_user: payload.memberId,
-    create_date: momentTZ.tz(payload.created, timeZone).format('YYYY-MM-DD HH:mm:ss'),
-    modify_user: payload.memberId,
-    modify_date: momentTZ.tz(payload.created, timeZone).format('YYYY-MM-DD HH:mm:ss')
-  }
+    let submissionId
+    let uploadType
 
-  await InformixService.insertRecord(connection, 'upload', {
-    upload_id: uploadId,
-    project_id: payload.challengeId,
-    project_phase_id: payload.submissionPhaseId,
-    resource_id: resourceId,
-    upload_type_id: uploadType,
-    url: payload.url,
-    upload_status_id: constants.uploadStatus.Active,
-    parameter: 'N/A',
-    ...audits
-  })
-
-  let patchObject
-
-  if (uploadType === constants.uploadTypes['Final Fix']) {
-    logger.debug('final fix upload, only insert upload')
-    patchObject = {
-      legacyUploadId: uploadId
+    if (phaseTypeId === constants.phaseTypes['Final Fix']) {
+      uploadType = constants.uploadTypes['Final Fix']
+    } else {
+      submissionId = await idSubmissionGen.getNextId()
+      uploadType = constants.uploadTypes.Submission
     }
-  } else {
-    await InformixService.insertRecord(connection, 'submission', {
-      submission_id: submissionId,
+
+    const audits = {
+      create_user: payload.memberId,
+      create_date: momentTZ.tz(payload.created, timeZone).format('YYYY-MM-DD HH:mm:ss'),
+      modify_user: payload.memberId,
+      modify_date: momentTZ.tz(payload.created, timeZone).format('YYYY-MM-DD HH:mm:ss')
+    }
+
+    await InformixService.insertRecord(connection, 'upload', {
       upload_id: uploadId,
-      submission_status_id: constants.submissionStatus.Active,
-      submission_type_id: constants.submissionTypes[payload.type].id,
-      ...audits
-    })
-
-    await InformixService.insertRecord(connection, 'resource_submission', {
-      submission_id: submissionId,
+      project_id: payload.challengeId,
+      project_phase_id: payload.submissionPhaseId,
       resource_id: resourceId,
+      upload_type_id: uploadType,
+      url: payload.url,
+      upload_status_id: constants.uploadStatus.Active,
+      parameter: 'N/A',
       ...audits
     })
 
-    patchObject = {
-      legacySubmissionId: submissionId
-    }
-  }
+    let patchObject
 
-  logger.debug(`Patched to the Submission API: id ${payload.id}`)
-  await submissionApiClient.patchSubmission(payload.id, patchObject)
+    if (uploadType === constants.uploadTypes['Final Fix']) {
+      logger.debug('final fix upload, only insert upload')
+      patchObject = {
+        legacyUploadId: uploadId
+      }
+    } else {
+      await InformixService.insertRecord(connection, 'submission', {
+        submission_id: submissionId,
+        upload_id: uploadId,
+        submission_status_id: constants.submissionStatus.Active,
+        submission_type_id: constants.submissionTypes[payload.type].id,
+        ...audits
+      })
+
+      await InformixService.insertRecord(connection, 'resource_submission', {
+        submission_id: submissionId,
+        resource_id: resourceId,
+        ...audits
+      })
+
+      patchObject = {
+        legacySubmissionId: submissionId
+      }
+    }
+
+    logger.debug(`Patched to the Submission API: id ${payload.id}`)
+    await submissionApiClient.patchSubmission(payload.id, patchObject)
+
+    await connection.commitTransactionAsync()
+  } catch (e) {
+    await connection.rollbackTransactionAsync()
+    throw e
+  } finally {
+    await connection.closeAsync()
+  }
 }
 
 createChallengeSubmission.schema = {
@@ -119,37 +132,21 @@ async function processMessage (message) {
     return
   }
 
-  // informix database connection
-  const connection = await helper.getInformixConnection()
+  switch (message.payload.resource) {
+    // handle submission resource
+    case constants.resources.submission:
+      await processSubmission(message.payload)
+      break
 
-  try {
-    // begin transaction
-    await connection.beginTransactionAsync()
+    // handle review resource
+    case constants.resources.review:
+      await processReview(message.payload)
+      break
 
-    switch (message.payload.resource) {
-      // handle submission resource
-      case constants.resources.submission:
-        await processSubmission(connection, message.payload)
-        break
-
-      // handle review resource
-      case constants.resources.review:
-        await processReview(connection, message.payload)
-        break
-
-      // handle review summation resource
-      case constants.resources.reviewSummation:
-        await processReviewSummation(connection, message.payload)
-        break
-    }
-
-    // commit the transaction
-    await connection.commitTransactionAsync()
-  } catch (e) {
-    await connection.rollbackTransactionAsync()
-    throw e
-  } finally {
-    await connection.closeAsync()
+    // handle review summation resource
+    case constants.resources.reviewSummation:
+      await processReviewSummation(message.payload)
+      break
   }
 }
 
@@ -183,10 +180,9 @@ processMessage.schema = {
 
 /**
  * Update challenge submission
- * @param {Object} connection the Informix connection
  * @param {Object} payload the message payload
  */
-async function updateChallengeSubmission (connection, payload) {
+async function updateChallengeSubmission (payload) {
   let legacySubmissionId = payload.legacySubmissionId
   if (!legacySubmissionId) {
     // The legacy submission id is not provided in the payload, we get it from the submissions-api
@@ -194,18 +190,32 @@ async function updateChallengeSubmission (connection, payload) {
     legacySubmissionId = submission.body.legacySubmissionId || 0
   }
 
-  if (legacySubmissionId !== 0) {
-    await InformixService.updateUploadUrl(connection, payload.url, legacySubmissionId)
-    logger.debug(`Updated submission : id ${payload.id}, url ${payload.url}, legacySubmissionId ${legacySubmissionId}`)
+  if (legacySubmissionId !== 0 || !payload.url) {
+    // informix database connection
+    const connection = await helper.getInformixConnection()
+
+    try {
+      await connection.beginTransactionAsync()
+
+      await InformixService.updateUploadUrl(connection, payload.url, legacySubmissionId)
+      logger.debug(`Updated submission : id ${payload.id}, url ${payload.url}, legacySubmissionId ${legacySubmissionId}`)
+
+      await connection.commitTransactionAsync()
+    } catch (e) {
+      await connection.rollbackTransactionAsync()
+      throw e
+    } finally {
+      await connection.closeAsync()
+    }
   } else {
-    logger.debug('legacy submission id not found, no update performed')
+    logger.debug('legacy submission id not found / payload url not available, no update performed')
   }
 }
 
 updateChallengeSubmission.schema = {
   payload: Joi.object().keys({
     id: Joi.sid().required(),
-    url: Joi.string().uri().required(),
+    url: Joi.string().uri(),
     legacySubmissionId: Joi.id()
   }).unknown(true).required()
 }
@@ -214,19 +224,18 @@ updateChallengeSubmission.schema = {
  * This function processes the submission resource.
  * It either creates or updates the submission resource based on the originalTopic
  *
- * @param {Object} connection The informix database connection
  * @param {Object} payload The submission event payload.
  */
-async function processSubmission (connection, payload) {
+async function processSubmission (payload) {
   switch (payload.originalTopic) {
     // create submission event
     case config.KAFKA_NEW_SUBMISSION_TOPIC:
-      await createChallengeSubmission(connection, payload)
+      await createChallengeSubmission(payload)
       break
 
     // update submission event
     case config.KAFKA_UPDATE_SUBMISSION_TOPIC:
-      await updateChallengeSubmission(connection, payload)
+      await updateChallengeSubmission(payload)
       break
 
     default:
@@ -248,10 +257,9 @@ processSubmission.schema = {
 /**
  * This function is responsible of processing the review event.
  *
- * @param {Object} connection The informix database connection
  * @param {Object} payload The create review event payload
  */
-async function processReview (connection, payload) {
+async function processReview (payload) {
   // Only events related to 'provisional' tests need to be considered
   const testType = _.get(payload, 'metadata.testType')
   if (testType !== constants.reviewTestTypes.provisional) {
@@ -273,15 +281,28 @@ async function processReview (connection, payload) {
   // Validate the required fields for the submission
   await helper.validateSubmissionFields(submission, ['memberId', 'submissionPhaseId', 'type', 'legacySubmissionId'])
 
-  // Update the provisional score for the submission
-  await InformixService.updateProvisionalScore(
-    connection,
-    submission.challengeId,
-    submission.memberId,
-    submission.submissionPhaseId,
-    submission.legacySubmissionId,
-    submission.type,
-    payload.score)
+  // informix database connection
+  const connection = await helper.getInformixConnection()
+
+  try {
+    await connection.beginTransactionAsync()
+    // Update the provisional score for the submission
+    await InformixService.updateProvisionalScore(
+      connection,
+      submission.challengeId,
+      submission.memberId,
+      submission.submissionPhaseId,
+      submission.legacySubmissionId,
+      submission.type,
+      payload.score)
+
+    await connection.commitTransactionAsync()
+  } catch (e) {
+    await connection.rollbackTransactionAsync()
+    throw e
+  } finally {
+    await connection.closeAsync()
+  }
 }
 
 processReview.schema = {
@@ -299,23 +320,36 @@ processReview.schema = {
 /**
  * This function is responsible of processing the review summation event.
  *
- * @param {Object} connection The informix database connection
  * @param {Object} payload The review summation event payload.
  */
-async function processReviewSummation (connection, payload) {
+async function processReviewSummation (payload) {
   // Get the submission from submissions API
   const response = await submissionApiClient.getSubmission(payload.submissionId)
   const submission = response.body
 
   await helper.validateSubmissionFields(submission, ['memberId', 'legacySubmissionId'])
 
-  await InformixService.updateFinalScore(
-    connection,
-    submission.challengeId,
-    submission.memberId,
-    submission.legacySubmissionId,
-    payload.aggregateScore
-  )
+  // informix database connection
+  const connection = await helper.getInformixConnection()
+
+  try {
+    await connection.beginTransactionAsync()
+
+    await InformixService.updateFinalScore(
+      connection,
+      submission.challengeId,
+      submission.memberId,
+      submission.legacySubmissionId,
+      payload.aggregateScore
+    )
+
+    await connection.commitTransactionAsync()
+  } catch (e) {
+    await connection.rollbackTransactionAsync()
+    throw e
+  } finally {
+    await connection.closeAsync()
+  }
 }
 
 processReviewSummation.schema = {
