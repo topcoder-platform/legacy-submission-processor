@@ -19,3 +19,4 @@ if [ "$UPDATE_CACHE" == 1 ]
 then
   docker cp app:/app/node_modules .
 fi
+
