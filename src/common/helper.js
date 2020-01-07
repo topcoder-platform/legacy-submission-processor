@@ -31,8 +31,7 @@ async function getInformixConnection () {
                            ';DB_LOCALE=' + config.get('INFORMIX.DB_LOCALE') +
                            ';UID=' + config.get('INFORMIX.USER') +
                            ';PWD=' + config.get('INFORMIX.PASSWORD')
-  const conn = await pool.openAsync(connectionString)
-  console.log(`Acquired the informix connection ${conn}`)
+  const conn = await pool.openSync(connectionString)
   return Promise.promisifyAll(conn)
 }
 
