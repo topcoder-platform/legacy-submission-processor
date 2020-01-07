@@ -30,7 +30,7 @@
     "config": "^3.2.3",
     "get-parameter-names": "^0.3.0",
     "http-json-response": "^1.0.1",
-    "ifxnjs": "^10.0.5",
+    "ifxnjs": "^8.0.1",
     "lodash": "^4.17.15",
     "moment-timezone": "^0.5.26",
     "no-kafka": "^3.4.3",
