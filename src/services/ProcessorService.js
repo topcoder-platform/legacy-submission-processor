@@ -170,12 +170,11 @@ processMessage.schema = {
         .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
       memberId: Joi.id()
         .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
-      url: Joi.string()
-        .when('resource', { is: constants.resources.submission, then: Joi.string().uri().required() }),
       type: Joi.string()
         .when('resource', { is: constants.resources.submission, then: Joi.string().required() }),
       created: Joi.date()
         .when('originalTopic', { is: config.KAFKA_NEW_SUBMISSION_TOPIC, then: Joi.date().required() }),
+      url: Joi.string(),
       legacySubmissionId: Joi.id()
     }).unknown(true).required()
   }).required()
@@ -241,7 +240,11 @@ async function processSubmission (payload) {
 
     // update submission event
     case config.KAFKA_UPDATE_SUBMISSION_TOPIC:
-      await updateChallengeSubmission(payload)
+      if (payload.legacySubmissionId) {
+        logger.debug(`Skipped message for resource ${payload.resource} and originalTopic ${payload.originalTopic}`)
+      } else {
+        await updateChallengeSubmission(payload)
+      }
       break
 
     default:
