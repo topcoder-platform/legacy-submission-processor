@@ -14,11 +14,12 @@
   "author": "TCSCODER",
   "license": "none",
   "devDependencies": {
-    "should": "^13.2.3",
     "mocha": "^6.2.1",
-    "superagent": "^5.1.0",
     "nyc": "^14.1.1",
-    "standard": "^14.0.1"
+    "pm2": "^4.2.1",
+    "should": "^13.2.3",
+    "standard": "^14.0.1",
+    "superagent": "^5.1.0"
   },
   "dependencies": {
     "@hapi/joi": "^15.1.0",

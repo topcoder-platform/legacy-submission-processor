@@ -27,6 +27,7 @@ const timeZone = 'America/New_York'
  */
 async function createChallengeSubmission (payload) {
   // informix database connection
+  logger.info(`Creating Submission for ${payload.id}`)
   const connection = await helper.getInformixConnection()
 
   try {
@@ -102,9 +103,11 @@ async function createChallengeSubmission (payload) {
 
     await connection.commitTransactionAsync()
   } catch (e) {
+    logger.error(`Error in 'create submission' ${e}`)
     await connection.rollbackTransactionAsync()
     throw e
   } finally {
+    logger.info(`Submission created for ${payload.id}`)
     await connection.closeAsync()
   }
 }
@@ -172,7 +175,7 @@ processMessage.schema = {
       type: Joi.string()
         .when('resource', { is: constants.resources.submission, then: Joi.string().required() }),
       created: Joi.date()
-        .when('resource', { is: constants.resources.submission, then: Joi.date().required() }),
+        .when('originalTopic', { is: config.KAFKA_NEW_SUBMISSION_TOPIC, then: Joi.date().required() }),
       legacySubmissionId: Joi.id()
     }).unknown(true).required()
   }).required()
@@ -183,6 +186,7 @@ processMessage.schema = {
  * @param {Object} payload the message payload
  */
 async function updateChallengeSubmission (payload) {
+  logger.info(`Updating Submission for ${payload.id}`)
   let legacySubmissionId = payload.legacySubmissionId
   if (!legacySubmissionId) {
     // The legacy submission id is not provided in the payload, we get it from the submissions-api
@@ -202,9 +206,11 @@ async function updateChallengeSubmission (payload) {
 
       await connection.commitTransactionAsync()
     } catch (e) {
+      logger.error(`Error in updating Submission for ${payload.id}`)
       await connection.rollbackTransactionAsync()
       throw e
     } finally {
+      logger.info(`Completed updating submission for ${payload.id}`)
       await connection.closeAsync()
     }
   } else {
@@ -260,6 +266,7 @@ processSubmission.schema = {
  * @param {Object} payload The create review event payload
  */
 async function processReview (payload) {
+  logger.info(`Updating provisional score for ${payload.submissionId}`)
   // Only events related to 'provisional' tests need to be considered
   const testType = _.get(payload, 'metadata.testType')
   if (testType !== constants.reviewTestTypes.provisional) {
@@ -298,9 +305,11 @@ async function processReview (payload) {
 
     await connection.commitTransactionAsync()
   } catch (e) {
+    logger.error(`Error in updating provisional score for ${payload.submissionId}`)
     await connection.rollbackTransactionAsync()
     throw e
   } finally {
+    logger.info(`Compelted updating provisional score for ${payload.submissionId}`)
     await connection.closeAsync()
   }
 }
@@ -323,6 +332,7 @@ processReview.schema = {
  * @param {Object} payload The review summation event payload.
  */
 async function processReviewSummation (payload) {
+  logger.info(`Updating final score for ${payload.submissionId}`)
   // Get the submission from submissions API
   const response = await submissionApiClient.getSubmission(payload.submissionId)
   const submission = response.body
@@ -345,9 +355,11 @@ async function processReviewSummation (payload) {
 
     await connection.commitTransactionAsync()
   } catch (e) {
+    logger.error(`Completed updating final score for ${payload.submissionId}`)
     await connection.rollbackTransactionAsync()
     throw e
   } finally {
+    logger.info(`Error in updating final score for ${payload.submissionId}`)
     await connection.closeAsync()
   }
 }
