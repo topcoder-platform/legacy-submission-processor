@@ -149,39 +149,11 @@ async function updateProvisionalScore (
 ) {
   logger.debug(`Update provisional score for submission: ${submissionId}`)
 
-  // Query componentStateId
-  const componentStateId = _.get(await getMMChallengeProperties(
-    connection,
-    challengeId,
-    userId
-  ), 'long_component_state_id')
-
-  if (!componentStateId) {
-    throw new Error(`MM component state not found, challengeId: ${challengeId}, userId: ${userId}`)
-  }
-
-  logger.debug(`Get componentStateId: ${componentStateId}`)
-
-  // Query submission number
-  const result = await connection.queryAsync(
-    util.format(GET_SUBMISSION_NUMBER_QUERY, challengeId, phaseId, userId,
-      constants.submissionTypes[submissionType].roleId, submissionId))
-
-  const submissionNumber = _.get(result[0], 'submissionnumber')
-
-  logger.debug(`Get submission number: ${submissionNumber}`)
-
-  // Update the initial_score in submission table
-  let query = await prepare(connection, UPDATE_SUBMISSION_INITIAL_REVIEW_SCORE_QUERY)
+  await getMMChallengeProperties(connection, challengeId, userId)
+  const query = await prepare(connection, UPDATE_SUBMISSION_INITIAL_REVIEW_SCORE_QUERY)
   await query.executeAsync([reviewScore, submissionId])
 
-  // Update the submission_points in informixoltp:long_submission table
-  query = await prepare(connection, UPDATE_LONG_SUBMISSION_SCORE_QUERY)
-  await query.executeAsync([reviewScore, componentStateId, submissionNumber])
-
-  // Update the points in informixoltp:long_component_state table
-  query = await prepare(connection, UPDATE_LONG_COMPONENT_STATE_POINTS_QUERY)
-  await query.executeAsync([reviewScore, componentStateId])
+  logger.debug(`Updated provisional score for submission: ${submissionId}`)
 }
 
 /**
@@ -196,94 +168,11 @@ async function updateProvisionalScore (
 async function updateFinalScore (connection, challengeId, userId, submissionId, finalScore) {
   logger.debug(`Update final score for submission: ${submissionId}`)
 
-  // Query roundId and ratedInd
-  const challengeProperties = await getMMChallengeProperties(connection, challengeId, userId)
-  let [roundId, ratedInd] = [_.get(challengeProperties, 'round_id'), _.get(challengeProperties, 'rated_ind')]
-
-  if (!roundId) {
-    throw new Error(`MM round not found, challengeId: ${challengeId}, userId: ${userId}`)
-  }
-
-  logger.debug(`Get roundId: ${roundId}`)
-
-  // Update the final_score in submission table
-  let query = await prepare(connection, UPDATE_SUBMISSION_FINAL_REVIEW_SCORE_QUERY)
+  await getMMChallengeProperties(connection, challengeId, userId)
+  const query = await prepare(connection, UPDATE_SUBMISSION_FINAL_REVIEW_SCORE_QUERY)
   await query.executeAsync([finalScore, submissionId])
 
-  // Get initial_score from submission table
-  let result = await connection.queryAsync(util.format(GET_SUBMISSION_INITIAL_SCORE_QUERY, submissionId))
-  const initialScore = _.get(result[0], 'initial_score')
-
-  // Check whether user result exists in informixoltp:long_comp_result
-  result = await connection.queryAsync(util.format(CHECK_COMP_RESULT_EXISTS_QUERY, roundId, userId))
-
-  const resultExists = Number(result[0].count) > 0
-
-  ratedInd = ratedInd ? 1 : 0
-  const params = {
-    roundId: Number(roundId),
-    userId,
-    initialScore: _.isFinite(Number(initialScore)) ? initialScore : 0,
-    finalScore,
-    ratedInd
-  }
-
-  let userLastCompResult
-  if (ratedInd) {
-    // The match is rated.
-    // Find user's last entry from informixoltp:long_comp_result
-    logger.debug('Rated Match - Get previous Rating and Vol')
-    const userLastCompResultArr = await connection.queryAsync(
-      util.format(GET_LAST_COMP_RESULT_QUERY, roundId, userId)
-    )
-
-    if (_.isArray(userLastCompResultArr) && userLastCompResultArr.length) {
-      userLastCompResult = userLastCompResultArr[0]
-    }
-    logger.debug(`Old Rating and Vol values ${userLastCompResult}`)
-  }
-
-  if (userLastCompResult) {
-    params.oldRating = _.isFinite(userLastCompResult[0]) ? userLastCompResult[0] : null
-    params.oldVol = _.isFinite(userLastCompResult[1]) ? userLastCompResult[1] : null
-  } else {
-    params.oldRating = null
-    params.oldVol = null
-  }
-
-  if (resultExists) {
-    logger.debug(`Update long_comp_result with params: ${JSON.stringify(params)}`)
-    // Update the long_comp_result table
-    query = await prepare(connection, UPDATE_COMP_RESULT_SCORE_QUERY)
-    await query.executeAsync(
-      [params.initialScore, params.finalScore, params.oldRating, params.oldVol,
-        params.ratedInd, params.roundId, params.userId])
-  } else {
-    // Add entry in long_comp_result table
-    logger.debug(`Insert into long_comp_result with params: ${JSON.stringify(params)}`)
-    await insertRecord(connection, 'informixoltp:long_comp_result', {
-      round_id: params.roundId,
-      coder_id: params.userId,
-      point_total: params.initialScore,
-      attended: 'N',
-      placed: 0,
-      advanced: 'N',
-      system_point_total: params.finalScore,
-      old_rating: params.oldRating,
-      old_vol: params.oldVol,
-      rated_ind: params.ratedInd
-    })
-  }
-
-  // Update placed
-  result = await connection.queryAsync(util.format(GET_COMP_RESULT_QUERY, roundId))
-  query = await prepare(connection, UPDATE_COMP_RESULT_PLACE_QUERY)
-  for (let i = 1; i <= result.length; i++) {
-    const r = result[i - 1]
-    if (i !== r[1]) {
-      await query.executeAsync([i, roundId, r.coder_id])
-    }
-  }
+  logger.debug(`Updated final score for submission: ${submissionId}`)
 }
 
 /**

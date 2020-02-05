@@ -42,7 +42,7 @@ const reviewTestTypes = {
 }
 
 const reviewTypes = {
-  AntivirusScan: 'AV SCAN'
+  AntivirusScan: 'Virus Scan'
 }
 
 module.exports = {

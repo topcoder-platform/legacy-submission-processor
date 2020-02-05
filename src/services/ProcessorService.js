@@ -143,9 +143,7 @@ async function processMessage (message) {
 
     // handle review resource
     case constants.resources.review:
-      if (message.payload.typeId !== config.AV_SCAN_TYPEID) {
-        await processReview(message.payload)
-      }
+      await processReview(message.payload)
       break
 
     // handle review summation resource
