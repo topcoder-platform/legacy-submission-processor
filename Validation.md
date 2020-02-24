@@ -42,7 +42,7 @@ start Kafka server, start informix database(Make sure you have already executed 
 14. write the the following message:
   `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6445-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.update", "challengeId": 30005521, "legacySubmissionId": 2000 , "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path1", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`
 
-15. The processor console will show a success message. Repeat step 13 to check if the value of the url has been updated
+15. The processor console will show a skipped message `Skipped message for resource submission and originalTopic submission.notification.update`
 
 16. write the following message:
   `{ "topic": "submission.notification.aggregate","originator": "submission-api","timestamp": "2019-10-08T00:00:00.000Z","mime-type": "application/json","payload": { "id": "cfdbc0cf-6443-433e-8af1-c56f317f2afd", "originalTopic": "submission.notification.update", "challengeId": 30005521, "memberId": 124916, "resource": "submission", "url": "http://content.topcoder.com/some/path2", "type": "Contest Submission", "submissionPhaseId": 95245, "created": "2018-02-16T00:00:00" } }`

@@ -149,7 +149,6 @@ async function updateProvisionalScore (
 ) {
   logger.debug(`Update provisional score for submission: ${submissionId}`)
 
-  await getMMChallengeProperties(connection, challengeId, userId)
   const query = await prepare(connection, UPDATE_SUBMISSION_INITIAL_REVIEW_SCORE_QUERY)
   await query.executeAsync([reviewScore, submissionId])
 
@@ -168,7 +167,6 @@ async function updateProvisionalScore (
 async function updateFinalScore (connection, challengeId, userId, submissionId, finalScore) {
   logger.debug(`Update final score for submission: ${submissionId}`)
 
-  await getMMChallengeProperties(connection, challengeId, userId)
   const query = await prepare(connection, UPDATE_SUBMISSION_FINAL_REVIEW_SCORE_QUERY)
   await query.executeAsync([finalScore, submissionId])
 
@@ -187,8 +185,8 @@ async function getMMChallengeProperties (connection, challengeId, userId) {
   const result = await connection.queryAsync(util.format(GET_MMCHALLENGE_PROPERTIES_QUERY, challengeId, userId))
 
   if (!_.isArray(result) || _.isEmpty(result)) {
-    throw new Error(
-      `null or empty result get mm challenge properties for : challenge id ${challengeId}, user id ${userId}`)
+    logger.info(`null or empty result get mm challenge properties for : challenge id ${challengeId}, user id ${userId}`)
+    return null
   }
   return result[0]
 }
@@ -198,5 +196,6 @@ module.exports = {
   updateProvisionalScore,
   updateFinalScore,
   getChallengeProperties,
-  updateUploadUrl
+  updateUploadUrl,
+  getMMChallengeProperties
 }

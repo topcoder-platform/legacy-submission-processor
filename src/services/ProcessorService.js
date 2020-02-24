@@ -294,6 +294,13 @@ async function processReview (payload) {
   // informix database connection
   const connection = await helper.getInformixConnection()
 
+  // Verify that its a MM challenge
+  const result = await InformixService.getMMChallengeProperties(connection, submission.challengeId, submission.memberId)
+
+  if (!result) {
+    return
+  }
+
   try {
     await connection.beginTransactionAsync()
     // Update the provisional score for the submission
@@ -344,6 +351,13 @@ async function processReviewSummation (payload) {
 
   // informix database connection
   const connection = await helper.getInformixConnection()
+
+  // Verify that its a MM challenge
+  const result = await InformixService.getMMChallengeProperties(connection, submission.challengeId, submission.memberId)
+
+  if (!result) {
+    return
+  }
 
   try {
     await connection.beginTransactionAsync()
