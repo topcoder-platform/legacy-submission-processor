@@ -66,11 +66,11 @@ consumer
   }])
   // consume configured topics
   .then(() => {
-    logger.info('Initialized.......')
+    logger.info('=== Initialized ===')
     healthcheck.init([check])
-    logger.info('Adding topics successfully.......')
+    logger.info('=== Adding topics successfully ===')
     logger.info(topics)
-    logger.info('Kick Start.......')
+    logger.info('=== Kick Start ===')
   })
   .catch((err) => logger.error(err))
 
