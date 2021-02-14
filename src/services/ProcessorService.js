@@ -32,7 +32,13 @@ async function createChallengeSubmission (payload) {
 
   try {
     await connection.beginTransactionAsync()
-
+    if (helper.isUuid(payload.submissionPhaseId)) {
+      const phaseName = await helper.getPhaseName(payload.v5ChallengeId, payload.submissionPhaseId)
+      if (phaseName) {
+        payload.submissionPhaseId = await InformixService.getChallengePhaseId(connection, payload.challengeId, phaseName)
+      }
+      logger.debug(`set submissionPhaseId ${payload.submissionPhaseId}`)
+    }
     const {
       resourceId,
       phaseTypeId
@@ -116,8 +122,9 @@ createChallengeSubmission.schema = {
   payload: Joi.object().keys({
     resource: Joi.resource(),
     id: Joi.sid().required(),
-    submissionPhaseId: Joi.id().required(),
+    submissionPhaseId: Joi.idOrUuid().required(),
     challengeId: Joi.id().required(),
+    v5ChallengeId: Joi.sid(),
     memberId: Joi.id().required(),
     url: Joi.string().uri().required(),
     type: Joi.string().required(),
@@ -164,10 +171,11 @@ processMessage.schema = {
       resource: Joi.resource().required(),
       originalTopic: Joi.string()
         .when('resource', { is: constants.resources.submission, then: Joi.string().required() }),
-      submissionPhaseId: Joi.id()
-        .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
+      submissionPhaseId: Joi.idOrUuid()
+        .when('resource', { is: constants.resources.submission, then: Joi.idOrUuid().required() }),
       challengeId: Joi.id()
         .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
+      v5ChallengeId: Joi.sid(),
       memberId: Joi.id()
         .when('resource', { is: constants.resources.submission, then: Joi.id().required() }),
       type: Joi.string()
