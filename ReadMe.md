@@ -32,6 +32,7 @@ The following parameters can be set in config files or in env variables:
 - AUTH0_CLIENT_SECRET: Auth0 client secret, used to get TC M2M token
 - AUTH0_PROXY_SERVER_URL: Proxy Auth0 URL, used to get TC M2M token
 - SUBMISSION_API_URL: The Submission API URL
+- V5_CHALLENGE_API_URL: The V5 Challenge API URL
 - ID_SEQ_SUBMISSION: The Informix Submission Table Sequence Name
 - ID_SEQ_UPLOAD: The Informix Upload Table Sequence Name
 - INFORMIX: Informix database configuration parameters, It has all configuration relate to database connection(SERVER, DATABASE, HOST, PROTOCOL, PORTDB_LOCALE, USER, PASSWORD, POOL_MAX_SIZE). refer `config/default.js` for more information

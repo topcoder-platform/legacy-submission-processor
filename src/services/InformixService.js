@@ -191,11 +191,30 @@ async function getMMChallengeProperties (connection, challengeId, userId) {
   return result[0]
 }
 
+/**
+ * Get submission phase id
+ * @param {Object} connection Informix db connectio object
+ * @param {Number} challengeId challenge id
+ * @param {String} phaseName phase name
+ * @returns {Number} phase id
+ */
+async function getChallengePhaseId (connection, challengeId, phaseName) {
+  // The query to get phaseId
+  const query = `select p.project_phase_id from project_phase p, phase_type_lu ptl
+    where p.project_id = ${challengeId} and p.phase_type_id = ptl.phase_type_id and ptl.name = '${phaseName}'`
+  const result = await connection.queryAsync(query)
+  if (result.length === 0) {
+    throw new Error(`Empty result get phaseId for: challengeId ${challengeId}, phaseName ${phaseName}`)
+  }
+  return Number(result[0].project_phase_id)
+}
+
 module.exports = {
   insertRecord,
   updateProvisionalScore,
   updateFinalScore,
   getChallengeProperties,
   updateUploadUrl,
-  getMMChallengeProperties
+  getMMChallengeProperties,
+  getChallengePhaseId
 }

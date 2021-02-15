@@ -32,6 +32,7 @@ module.exports = {
 
   // The Submission API URL
   SUBMISSION_API_URL: process.env.SUBMISSION_API_URL || 'http://localhost:3001',
+  V5_CHALLENGE_API_URL: process.env.V5_CHALLENGE_API_URL || 'http://api.topcoder-dev.com/v5/challenges',
 
   // The Informix Submission Table Sequence Name
   ID_SEQ_SUBMISSION: process.env.ID_SEQ_SUBMISSION || 'submission_id_seq',
