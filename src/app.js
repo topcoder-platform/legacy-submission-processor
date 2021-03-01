@@ -22,9 +22,8 @@ const consumer = new Kafka.GroupConsumer(helper.getKafkaOptions())
  * this function will be invoked
  */
 const dataHandler = (messageSet, topic, partition) => Promise.each(messageSet, (m) => {
-  const message = m.message.value.toString('utf8')
-  logger.info(`Handle Kafka event message; Topic: ${topic}; Partition: ${partition}; Offset: ${
-    m.offset}; Message: ${message}.`)
+  const message = m.message.value ? m.message.value.toString('utf8') : null
+  logger.info(`Handle Kafka event message; Topic: ${topic}; Partition: ${partition}; Offset: ${m.offset}; Message: ${message}.`)
   let messageJSON
   try {
     messageJSON = JSON.parse(message)
@@ -34,12 +33,7 @@ const dataHandler = (messageSet, topic, partition) => Promise.each(messageSet, (
     return
   }
 
-  if (messageJSON.topic !== topic) {
-    logger.error(`The message topic ${messageJSON.topic} doesn't match the Kafka topic ${topic}.`)
-    return
-  }
-
-  ProcessorService.processMessage(messageJSON)
+  return ProcessorService.processMessage(messageJSON)
     .then(() => {
       logger.debug('Successfully processed message')
       consumer.commitOffset({ topic, partition, offset: m.offset })
@@ -72,11 +66,11 @@ consumer
   }])
   // consume configured topics
   .then(() => {
-    logger.info('Initialized.......')
+    logger.info('=== Initialized ===')
     healthcheck.init([check])
-    logger.info('Adding topics successfully.......')
+    logger.info('=== Adding topics successfully ===')
     logger.info(topics)
-    logger.info('Kick Start.......')
+    logger.info('=== Kick Start ===')
   })
   .catch((err) => logger.error(err))
 

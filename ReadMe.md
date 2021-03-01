@@ -9,7 +9,7 @@
 
 ## Configuration
 
-Configuration for the legacy groups processor is at `config/default.js`.
+Configuration for the legacy submission processor is at `config/default.js`.
 The following parameters can be set in config files or in env variables:
 
 - LOG_LEVEL: the log level; default value: 'debug'
@@ -24,6 +24,7 @@ The following parameters can be set in config files or in env variables:
 - KAFKA_AGGREGATE_SUBMISSION_TOPIC: aggregate submission Kafka topic, default value is 'submission.notification.aggregate'
 - INCOMING_KAFKA_ORIGINATOR: originator of Kafka message to be handled, default value is 'submission-api'
 - KAFKA_NEW_SUBMISSION_TOPIC: original topic of submission creation Kafka message(in message payload), default value is 'submission.notification.create'
+- KAFKA_UPDATE_SUBMISSION_TOPIC: original topic of submission update Kafka message(in message payload), default value is 'submission.notification.update'
 - AUTH0_URL: Auth0 URL, used to get TC M2M token
 - AUTH0_AUDIENCE: Auth0 audience, used to get TC M2M token
 - TOKEN_CACHE_TIME: Auth0 token cache time, used to get TC M2M token
@@ -31,6 +32,7 @@ The following parameters can be set in config files or in env variables:
 - AUTH0_CLIENT_SECRET: Auth0 client secret, used to get TC M2M token
 - AUTH0_PROXY_SERVER_URL: Proxy Auth0 URL, used to get TC M2M token
 - SUBMISSION_API_URL: The Submission API URL
+- V5_CHALLENGE_API_URL: The V5 Challenge API URL
 - ID_SEQ_SUBMISSION: The Informix Submission Table Sequence Name
 - ID_SEQ_UPLOAD: The Informix Upload Table Sequence Name
 - INFORMIX: Informix database configuration parameters, It has all configuration relate to database connection(SERVER, DATABASE, HOST, PROTOCOL, PORTDB_LOCALE, USER, PASSWORD, POOL_MAX_SIZE). refer `config/default.js` for more information
@@ -87,7 +89,7 @@ For deployment, please refer to next section 'Local Deployment with Docker'
 
 ## Mock Api
 
-Mock api is under `test/mock` folder. You can use command `npm run mock-api` to start the server. It is extracted from [legacy-processor-module](https://github.com/topcoder-platform/legacy-processor-module/blob/develop/mock/mock-api.js). Consider it will be used in later development, I don't modify it(reduce the useless code).
+Mock api is under `test/mock` folder. You can use command `npm run mock-api` to start the server.
 
 ## Local Deployment with Docker
 
@@ -97,12 +99,17 @@ To run the Legacy Processor using docker, follow the steps below
 
 2. Go to `docker` folder
 
-3. Rename the file `sample.api.env` to `api.env` And properly update the IP addresses to match your environment for the variables : KAFKA_URL, INFORMIX_HOST and SUBMISSION_API_URL( make sure to use IP address instead of hostname ( i.e localhost will not work)).Here is an example:
+3. Rename the file `sample.api.env` to `api.env` And properly update the IP addresses to match your environment for the variables : KAFKA_URL, INFORMIX_HOST and SUBMISSION_API_URL( make sure to use IP address instead of hostname ( i.e localhost will not work)).Here is an example (sensitive information are removed to prevent commiting them to git repository):
 
     ```bash
     KAFKA_URL=192.168.31.8:9092
     INFORMIX_HOST=192.168.31.8
     SUBMISSION_API_URL=http://192.168.31.8:3001
+    AUTH0_URL=https://topcoder-dev.auth0.com/oauth/token
+    AUTH0_AUDIENCE=https://m2m.topcoder-dev.com/
+    TOKEN_CACHE_TIME=90
+    AUTH0_CLIENT_ID='Some Client ID value'
+    AUTH0_CLIENT_SECRET='Some Client Secret value'
     ```
 
 4. Once that is done, go to run the following command
@@ -125,4 +132,4 @@ Modify `docker/docker-compose.yml` with `command: run e2e`(uncomment it) and run
 
 ## Verification
 
-Refer `Verification.md`
+Refer to `Validation.md`

@@ -20,6 +20,9 @@ module.exports = {
   // original topic of submission creation Kafka message
   KAFKA_NEW_SUBMISSION_TOPIC: process.env.KAFKA_NEW_SUBMISSION_TOPIC || 'submission.notification.create',
 
+  // original topic of submission update Kafka message
+  KAFKA_UPDATE_SUBMISSION_TOPIC: process.env.KAFKA_UPDATE_SUBMISSION_TOPIC || 'submission.notification.update',
+
   AUTH0_URL: process.env.AUTH0_URL,
   AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE,
   TOKEN_CACHE_TIME: process.env.TOKEN_CACHE_TIME,
@@ -29,6 +32,7 @@ module.exports = {
 
   // The Submission API URL
   SUBMISSION_API_URL: process.env.SUBMISSION_API_URL || 'http://localhost:3001',
+  V5_CHALLENGE_API_URL: process.env.V5_CHALLENGE_API_URL || 'http://api.topcoder-dev.com/v5/challenges',
 
   // The Informix Submission Table Sequence Name
   ID_SEQ_SUBMISSION: process.env.ID_SEQ_SUBMISSION || 'submission_id_seq',
