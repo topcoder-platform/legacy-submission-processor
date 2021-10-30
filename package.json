@@ -31,7 +31,7 @@
     "get-parameter-names": "^0.3.0",
     "http-json-response": "^1.0.1",
     "ifxnjs": "^10.0.5",
-    "lodash": "^4.17.15",
+    "lodash": "^4.17.21",
     "moment-timezone": "^0.5.26",
     "no-kafka": "^3.4.3",
     "q": "^1.5.1",
