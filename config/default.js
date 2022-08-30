@@ -23,6 +23,9 @@ module.exports = {
   // original topic of submission update Kafka message
   KAFKA_UPDATE_SUBMISSION_TOPIC: process.env.KAFKA_UPDATE_SUBMISSION_TOPIC || 'submission.notification.update',
 
+  // original topic of submission delete Kafka message
+  KAFKA_DELETE_SUBMISSION_TOPIC: process.env.KAFKA_DELETE_SUBMISSION_TOPIC || 'submission.notification.delete',
+
   AUTH0_URL: process.env.AUTH0_URL,
   AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE,
   TOKEN_CACHE_TIME: process.env.TOKEN_CACHE_TIME,

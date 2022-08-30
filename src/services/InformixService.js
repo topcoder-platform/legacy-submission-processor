@@ -116,6 +116,29 @@ async function insertRecord (connection, tableName, columnValues) {
 }
 
 /**
+ * Deletes the records matching the given conditions from the specified table.
+ *
+ * @param {Object} connection The Informix connection
+ * @param {String} tableName The name of the tale from which to delete the records
+ * @param {Object} whereConditions The where clause condition map
+ */
+async function deleteRecords (connection, tableName, whereConditions) {
+  const where = await constructWhereClause(whereConditions)
+  await connection.queryAsync(`delete from ${tableName} where (${where})`, [...Object.values(whereConditions)])
+}
+
+/**
+ * Constructs the SQL where clause using the specified where conditions
+ * @param {Object} whereConditions The where clause condition map
+ * @returns {String} The constructed where clause joined by 'And'
+ */
+async function constructWhereClause (whereConditions) {
+  let conditions = Object.keys(whereConditions)
+  conditions = _.map(conditions, c => `${c} = ?`)
+  return conditions.join(' and ')
+}
+
+/**
  * Updates the upload url for the submission identified by the given submission id.
  *
  * @param {Object} connection The Informix database connection
@@ -209,12 +232,30 @@ async function getChallengePhaseId (connection, challengeId, phaseName) {
   return Number(result[0].project_phase_id)
 }
 
+/**
+ * Get upload id
+ * @param {Object} connection Informix db connectio object
+ * @param {Number} submissionId submission id
+ * @returns {Number} phase id
+ */
+async function getUploadId (connection, submissionId) {
+  // The query to get uploadId
+  const query = `select upload_id from submission where submission_id = ${submissionId}`
+  const result = await connection.queryAsync(query)
+  if (result.length === 0) {
+    throw new Error(`Empty result get uploadId for: submissionId ${submissionId}`)
+  }
+  return Number(result[0].upload_id)
+}
+
 module.exports = {
   insertRecord,
+  deleteRecords,
   updateProvisionalScore,
   updateFinalScore,
   getChallengeProperties,
   updateUploadUrl,
   getMMChallengeProperties,
-  getChallengePhaseId
+  getChallengePhaseId,
+  getUploadId,
 }

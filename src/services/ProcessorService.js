@@ -234,6 +234,86 @@ updateChallengeSubmission.schema = {
 }
 
 /**
+ * Delete challenge submission
+ * @param {Object} payload the message payload
+ */
+async function deleteChallengeSubmission (payload) {
+  logger.info(`Deleting Submission for ${payload.id}`)
+  // The legacy submission id is not provided in the payload, we get it from the submissions-api
+  const submission = await submissionApiClient.getSubmission(payload.id)
+  const legacySubmissionId = submission.body.legacySubmissionId || 0
+  let legacyUploadId
+  let isFinalFixPhase
+
+  // Try not `Final Fix Phase`
+  if (legacySubmissionId !== 0) {
+    // informix database connection
+    const connection = await helper.getInformixConnection()
+
+    try {
+      await connection.beginTransactionAsync()
+
+      legacyUploadId = await InformixService.getUploadId(connection, legacySubmissionId)
+      await InformixService.deleteRecords(connection, 'submission', { submission_id: legacySubmissionId })
+      await InformixService.deleteRecords(connection, 'resource_submission', { submission_id: legacySubmissionId })
+      await InformixService.deleteRecords(connection, 'upload', { upload_id: legacyUploadId })
+
+      await connection.commitTransactionAsync()
+      logger.debug(`Deleted submission : submission_id ${legacySubmissionId}`)
+      logger.debug(`Deleted resource_submission: submission_id ${legacySubmissionId}`)
+      logger.debug(`Deleted upload: upload_id ${legacyUploadId}`)
+
+      // Success, proven that it is not `Final Fix Phase`
+      isFinalFixPhase = false
+    } catch (e) {
+      logger.error(`Error in deleting Submission for ${payload.id}`)
+      isFinalFixPhase = true
+      await connection.rollbackTransactionAsync()
+      throw e
+    } finally {
+      logger.info(`Completed deleting Submission for ${payload.id}`)
+      await connection.closeAsync()
+    }
+  } else {
+    logger.debug('legacy submission id not found, it must be Final Fix Phase, will try legacy upload id')
+    isFinalFixPhase = true
+  }
+
+  if (!isFinalFixPhase) return
+
+  legacyUploadId = submission.body.legacyUploadId || 0
+  if (legacyUploadId !== 0) {
+    // informix database connection
+    const connection = await helper.getInformixConnection()
+
+    try {
+      await connection.beginTransactionAsync()
+
+      await InformixService.deleteRecords(connection, 'upload', { upload_id: legacyUploadId })
+      logger.debug(`Deleted upload : upload_id ${legacyUploadId}`)
+
+      await connection.commitTransactionAsync()
+
+    } catch (e) {
+      logger.error(`Error in deleting Submission for ${payload.id}`)
+      await connection.rollbackTransactionAsync()
+      throw e
+    } finally {
+      logger.info(`Completed deleting Submission for ${payload.id}`)
+      await connection.closeAsync()
+    }
+  } else {
+    logger.debug('legacy upload id not found, no delete performed')
+  }
+}
+
+deleteChallengeSubmission.schema = {
+  payload: Joi.object().keys({
+    id: Joi.sid().required(),
+  }).unknown(true).required()
+}
+
+/**
  * This function processes the submission resource.
  * It either creates or updates the submission resource based on the originalTopic
  *
@@ -253,6 +333,11 @@ async function processSubmission (payload) {
       } else {
         await updateChallengeSubmission(payload)
       }
+      break
+
+    // delete submission event
+    case config.KAFKA_DELETE_SUBMISSION_TOPIC:
+      await deleteChallengeSubmission(payload)
       break
 
     default:
@@ -402,6 +487,7 @@ module.exports = {
   processSubmission,
   createChallengeSubmission,
   updateChallengeSubmission,
+  deleteChallengeSubmission,
   processReview,
   processReviewSummation
 }
