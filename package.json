@@ -16,7 +16,7 @@
   "devDependencies": {
     "mocha": "^6.2.1",
     "nyc": "^14.1.1",
-    "pm2": "^4.2.1",
+    "pm2": "^5.2.0",
     "should": "^13.2.3",
     "standard": "^14.0.1",
     "superagent": "^5.1.0"
