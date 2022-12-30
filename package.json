@@ -14,7 +14,7 @@
   "author": "TCSCODER",
   "license": "none",
   "devDependencies": {
-    "mocha": "^6.2.1",
+    "mocha": "^10.2.0",
     "nyc": "^14.1.1",
     "pm2": "^4.2.1",
     "should": "^13.2.3",
